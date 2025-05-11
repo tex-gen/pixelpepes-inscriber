@@ -1,6 +1,6 @@
 // src/walletManager.js
 import Web3 from 'web3';
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import {
     ORIGINAL_CONTRACT_ADDRESS, HELPER_CONTRACT_ADDRESS, INSCRIBED_CONTRACT_ADDRESS, BASEDAI_CHAIN_ID
 } from './config';
