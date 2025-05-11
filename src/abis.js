@@ -1,3 +1,4 @@
+// src/abis.js
 export const ORIGINAL_ABI = [
     {
         "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
@@ -40,6 +41,17 @@ export const ORIGINAL_ABI = [
         ],
         "name": "isApprovedForAll",
         "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            { "internalType": "uint256", "name": "tokenId", "type": "uint256" }
+        ],
+        "name": "ownerOf",
+        "outputs": [
+            { "internalType": "address", "name": "", "type": "address" }
+        ],
         "stateMutability": "view",
         "type": "function"
     }
