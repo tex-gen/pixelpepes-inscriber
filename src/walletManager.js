@@ -188,5 +188,16 @@ export const useWalletEventListeners = (web3, account, setWeb3, setAccount, setO
                 window.ethereum.removeListener('chainChanged', handleChainChanged);
             }
         };
-    }, [web3, account]); // Only re-run if web3 or account changes
+    }, [
+        web3,
+        account,
+        setWeb3,
+        setAccount,
+        setOriginalContract,
+        setInscribedContract,
+        setHelperContract,
+        setOwnedV1Tokens,
+        setOwnedInscribedTokens,
+        setMessage
+    ]); // Added all dependencies to satisfy ESLint
 };
