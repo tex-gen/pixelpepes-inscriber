@@ -5,7 +5,6 @@ import Web3 from 'web3';
 import TokenCard from './components/TokenCard';
 import { connectWalletAndSetupContracts, useWalletEventListeners } from './walletManager';
 import { fetchOwnedTokens, fetchOwnedInscribedTokens } from './tokenFetcher';
-// approveAllForInscribed is removed from this import
 import { approveInscribedContract, burnMintAndInscribe, refreshTokens } from './contractActions';
 import { debounce } from './utils';
 
@@ -40,9 +39,6 @@ function App() {
     const approveInscribedContractFn = useMemo(() => approveInscribedContract(
         originalContract, account, web3, setLoading, setMessage, debouncedFetchOwnedTokens
     ), [originalContract, account, web3, debouncedFetchOwnedTokens]);
-
-    // approveAllForInscribedFn is REMOVED
-    // const approveAllForInscribedFn = useMemo(() => approveAllForInscribed(...), [...]); 
 
     const burnMintAndInscribeFn = useMemo(() => burnMintAndInscribe(
         inscribedContract, account, web3, originalContract, setLoading, setMessage,
@@ -97,7 +93,6 @@ function App() {
 
     return (
         <div className="app-container">
-            <title>PixelPepes Inscriber</title>
             <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
             <style>
                 {`
@@ -129,6 +124,7 @@ function App() {
                         text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
                         background-color: transparent;
                         margin-bottom: 15px;
+                        position: relative;
                     }
                     .header h1 {
                         font-size: 1.5em;
@@ -203,7 +199,8 @@ function App() {
                         max-width: 900px;
                     }
                     .token-grid {
-                        width: 910px; 
+                        width: 100%;
+                        max-width: 1200px;
                         margin: 10px auto;
                         border: 1px solid #00ff00;
                         border-radius: 5px;
@@ -212,12 +209,19 @@ function App() {
                         box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.2);
                         max-height: 500px;
                         overflow-y: auto;
+                        box-sizing: border-box;
                     }
                     .token-grid-inner {
                         display: flex;
                         flex-wrap: wrap;
                         justify-content: center;
                         gap: 15px;
+                        padding: 0;
+                        margin: 0;
+                    }
+                    .token-card {
+                        width: 200px;
+                        box-sizing: border-box;
                     }
                     .footer {
                         margin-top: 40px;
@@ -260,11 +264,50 @@ function App() {
                         font-size: 10px;
                         margin-top: 5px;
                     }
-                    /* .approve-all-button style can be removed if not used */
                     .connect-wallet-main-button {
                         margin-top: 30px;
                         padding: 12px 25px;
                         font-size: 16px;
+                    }
+                    @media (max-width: 768px) {
+                        .content-wrapper {
+                            padding: 10px;
+                        }
+                        .header {
+                            padding: 15px 0 20px 0;
+                        }
+                        .header h1 {
+                            font-size: 1.2em;
+                        }
+                        .description {
+                            margin: 10px auto;
+                            padding: 10px;
+                        }
+                        .wallet-container {
+                            position: static;
+                            text-align: center;
+                            margin: 5px 0;
+                        }
+                        .wallet-container p {
+                            font-size: 10px;
+                        }
+                        .refresh-button {
+                            margin-top: 8px;
+                        }
+                        .token-grid {
+                            padding: 3px;
+                            width: calc(100% - 20px);
+                            margin: 10px auto; /* Center the div */
+                        }
+                        .token-grid-inner {
+                            gap: 10px; /* Increased to 10px */
+                            justify-content: center; /* Center the cards */
+                            padding: 0;
+                            margin: 0;
+                        }
+                        .token-card {
+                            width: 140px;
+                        }
                     }
                 `}
             </style>
@@ -321,7 +364,6 @@ function App() {
                         )}
                         {!loading && ownedV1Tokens.length > 0 && (
                             <div>
-                                {/* "Approve All" button is REMOVED */}
                                 <div className="token-grid">
                                     <div className="token-grid-inner">
                                         {ownedV1Tokens.map(token => (
