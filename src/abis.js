@@ -45,18 +45,30 @@ export const ORIGINAL_ABI = [
         "type": "function"
     },
     {
-        "inputs": [
-            { "internalType": "uint256", "name": "tokenId", "type": "uint256" }
-        ],
+        "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
         "name": "ownerOf",
-        "outputs": [
-            { "internalType": "address", "name": "", "type": "address" }
-        ],
+        "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
         "stateMutability": "view",
+        "type": "function"
+    },
+    // Added methods for minting
+    {
+        "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+        "name": "mint",
+        "outputs": [{ "internalType": "uint256[]", "name": "", "type": "uint256[]" }],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "tokenPrice",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "pure",
         "type": "function"
     }
 ];
 
+// HELPER_ABI and INSCRIBED_ABI remain unchanged
 export const HELPER_ABI = [
     {
         "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],

@@ -5,7 +5,7 @@ import Web3 from 'web3';
 import TokenCard from './components/TokenCard';
 import { connectWalletAndSetupContracts, useWalletEventListeners } from './walletManager';
 import { fetchOwnedTokens, fetchOwnedInscribedTokens } from './tokenFetcher';
-import { approveInscribedContract, burnMintAndInscribe, refreshTokens } from './contractActions';
+import { approveInscribedContract, burnMintAndInscribe, refreshTokens, mintV1Tokens } from './contractActions'; // Added mintV1Tokens
 import { debounce } from './utils';
 
 function App() {
@@ -18,6 +18,7 @@ function App() {
     const [helperContract, setHelperContract] = useState(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [mintAmount, setMintAmount] = useState(1); // State for the number of tokens to mint
 
     const metadataCache = useRef(new Map());
     const hasFetchedV1Tokens = useRef(false);
@@ -48,6 +49,10 @@ function App() {
     const refreshTokensFn = useMemo(() => refreshTokens(
         setMessage, debouncedFetchOwnedTokens, debouncedFetchOwnedInscribedTokens
     ), [debouncedFetchOwnedTokens, debouncedFetchOwnedInscribedTokens]);
+
+    const mintV1TokensFn = useMemo(() => mintV1Tokens(
+        originalContract, account, web3, setLoading, setMessage, debouncedFetchOwnedTokens
+    ), [originalContract, account, web3, debouncedFetchOwnedTokens]);
 
     useWalletEventListeners(
         web3, account, setWeb3, setAccount, setOriginalContract, setInscribedContract,
@@ -89,6 +94,19 @@ function App() {
             setWeb3, setAccount, setOriginalContract, setInscribedContract, setHelperContract, setMessage
         );
         await connectFn(currentWeb3Instance);
+    };
+
+    const handleMint = async () => {
+        console.log(`Mint button clicked in App.js with amount: ${mintAmount}`);
+        await mintV1TokensFn(mintAmount);
+    };
+
+    const handleDecrement = () => {
+        setMintAmount(prev => Math.max(1, prev - 1)); // Ensure it doesn't go below 1
+    };
+
+    const handleIncrement = () => {
+        setMintAmount(prev => Math.min(10, prev + 1)); // Ensure it doesn't go above 10
     };
 
     return (
@@ -223,6 +241,35 @@ function App() {
                         width: 200px;
                         box-sizing: border-box;
                     }
+                    .mint-section {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 10px;
+                        margin: 20px 0;
+                    }
+                    .number-selector {
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                    }
+                    .number-selector button {
+                        padding: 5px 10px;
+                        font-size: 12px;
+                        min-width: 30px;
+                        min-height: 30px;
+                    }
+                    .number-selector input {
+                        width: 40px;
+                        text-align: center;
+                        background-color: #000;
+                        color: #00ff00;
+                        border: 1px solid #00ff00;
+                        border-radius: 5px;
+                        font-family: "Press Start 2P", cursive;
+                        font-size: 12px;
+                        padding: 5px;
+                    }
                     .footer {
                         margin-top: 40px;
                         padding-top: 20px;
@@ -297,16 +344,31 @@ function App() {
                         .token-grid {
                             padding: 3px;
                             width: calc(100% - 20px);
-                            margin: 10px auto; /* Center the div */
+                            margin: 10px auto;
                         }
                         .token-grid-inner {
-                            gap: 10px; /* Increased to 10px */
-                            justify-content: center; /* Center the cards */
+                            gap: 10px;
+                            justify-content: center;
                             padding: 0;
                             margin: 0;
                         }
                         .token-card {
                             width: 140px;
+                        }
+                        .mint-section {
+                            flex-direction: column;
+                            gap: 15px;
+                        }
+                        .number-selector button {
+                            padding: 5px 8px;
+                            font-size: 10px;
+                            min-width: 25px;
+                            min-height: 25px;
+                        }
+                        .number-selector input {
+                            width: 35px;
+                            font-size: 10px;
+                            padding: 3px;
                         }
                     }
                 `}
@@ -354,6 +416,24 @@ function App() {
                         <p className="warning">
                             Inscribing your $PXLPP transforms it into a unique $iPXLPP forever! Make sure to individually approve the inscriber contract first for each token you wish to upgrade. Note that inscribing artwork to the blockchain may be gas intensive!
                         </p>
+
+                        {/* Mint Section for V1 Pixel Pepes */}
+                        <div className="mint-section">
+                            <div className="number-selector">
+                                <button onClick={handleDecrement} disabled={loading || mintAmount <= 1}>-</button>
+                                <input
+                                    type="text"
+                                    value={mintAmount}
+                                    readOnly
+                                    disabled={loading}
+                                />
+                                <button onClick={handleIncrement} disabled={loading || mintAmount >= 10}>+</button>
+                            </div>
+                            <button onClick={handleMint} disabled={loading}>
+                                MINT $PXLPP
+                            </button>
+                        </div>
+
                         {/* $PXLPP Tokens Section */}
                         <h2 className="section-title">$PXLPP</h2>
                         {loading && ownedV1Tokens.length > 0 && <p style={{ fontSize: '14px', color: '#00ff00', textShadow: '0 0 5px rgba(0, 255, 0, 0.5)' }}>LOADING $PXLPP...</p>}

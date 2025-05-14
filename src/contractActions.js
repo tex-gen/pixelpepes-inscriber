@@ -21,15 +21,20 @@ export const approveInscribedContract = (
         
         const gasEstimate = await originalContract.methods.approve(INSCRIBED_CONTRACT_ADDRESS, tokenIdStr).estimateGas({ from: account });
         console.log(`Gas estimate for V1 approve: ${gasEstimate}`);
+        // Use Number for gasLimit calculation since it's typically small and doesn't exceed JavaScript's Number precision
         const gasLimit = Math.floor(Number(gasEstimate) * 1.2) + 20000;
         console.log(`Calculated gasLimit for V1 approve: ${gasLimit}`);
 
-        const gasPriceWei = await web3.eth.getGasPrice();
-        const totalFeeWei = Number(gasPriceWei) * Number(gasLimit); // Replace BigInt with Number
-        const balanceWei = await web3.eth.getBalance(account);
+        // Use BigInt for gas price and balance to handle large numbers accurately
+        const gasPriceWei = await web3.eth.getGasPrice(); // Returns BigInt in web3.js 4.x.x
+        const gasPriceBigInt = BigInt(gasPriceWei);
+        const gasLimitBigInt = BigInt(gasLimit);
+        const totalFeeWeiBigInt = gasPriceBigInt * gasLimitBigInt;
+        const balanceWei = await web3.eth.getBalance(account); // Returns BigInt in web3.js 4.x.x
+        const balanceWeiBigInt = BigInt(balanceWei);
 
-        if (Number(balanceWei) < totalFeeWei) { // Replace BigInt with Number
-            setMessage(`Insufficient BASED for gas fees. Required: ~${web3.utils.fromWei(totalFeeWei.toString(), 'ether')} BASED, Available: ${web3.utils.fromWei(balanceWei.toString(), 'ether')} BASED`);
+        if (balanceWeiBigInt < totalFeeWeiBigInt) {
+            setMessage(`Insufficient BASED for gas fees. Required: ~${web3.utils.fromWei(totalFeeWeiBigInt.toString(), 'ether')} BASED, Available: ${web3.utils.fromWei(balanceWeiBigInt.toString(), 'ether')} BASED`);
             setLoading(false);
             return;
         }
@@ -90,7 +95,6 @@ export const burnMintAndInscribe = (
         setMessage(`Validating V1 token ${tokenIdStr} state & specific approval...`);
         let v1Owner;
         try {
-            // Ensure ownerOf is defined in ORIGINAL_ABI in abis.js
             v1Owner = await originalContract.methods.ownerOf(tokenIdStr).call();
             if (v1Owner.toLowerCase() !== account.toLowerCase()) {
                 setMessage(`Error: You are not the owner of V1 token ${tokenIdStr}.`); 
@@ -165,12 +169,15 @@ export const burnMintAndInscribe = (
         );
         
         const hardcodedGasLimit = 35000000; 
-        const gasPriceWei = await web3.eth.getGasPrice();
-        
-        const balanceWeiTx = await web3.eth.getBalance(account);
-        const totalFeeWeiTx = Number(gasPriceWei) * Number(hardcodedGasLimit); // Replace BigInt with Number
-        if (Number(balanceWeiTx) < totalFeeWeiTx) { // Replace BigInt with Number
-            setMessage(`Insufficient BASED for inscription gas. Required: ~${web3.utils.fromWei(totalFeeWeiTx.toString(), 'ether')} BASED`);
+        const gasPriceWei = await web3.eth.getGasPrice(); // Returns BigInt in web3.js 4.x.x
+        const gasPriceBigInt = BigInt(gasPriceWei);
+        const gasLimitBigInt = BigInt(hardcodedGasLimit);
+        const totalFeeWeiBigInt = gasPriceBigInt * gasLimitBigInt;
+        const balanceWeiTx = await web3.eth.getBalance(account); // Returns BigInt in web3.js 4.x.x
+        const balanceWeiBigInt = BigInt(balanceWeiTx);
+
+        if (balanceWeiBigInt < totalFeeWeiBigInt) {
+            setMessage(`Insufficient BASED for inscription gas. Required: ~${web3.utils.fromWei(totalFeeWeiBigInt.toString(), 'ether')} BASED`);
             setLoading(false); return;
         }
 
@@ -228,4 +235,111 @@ export const refreshTokens = (
     setMessage('Refreshing token lists...');
     if (debouncedFetchOwnedTokens) debouncedFetchOwnedTokens();
     if (debouncedFetchOwnedInscribedTokens) debouncedFetchOwnedInscribedTokens();
+};
+
+// Function for minting V1 tokens using BigInt (compatible with web3.js 4.x.x)
+export const mintV1Tokens = (
+    originalContract,
+    account,
+    web3,
+    setLoading,
+    setMessage,
+    debouncedFetchOwnedTokens
+) => async (quantity) => {
+    if (!originalContract || !account || !web3) {
+        setMessage('Cannot mint: Prerequisites missing (contract, account, or web3).');
+        setLoading(false);
+        return;
+    }
+
+    setLoading(true);
+    setMessage(`Preparing to mint ${quantity} $PXLPP token${quantity > 1 ? 's' : ''}...`);
+
+    try {
+        // Step 1: Get the mint price per token
+        const pricePerToken = await originalContract.methods.tokenPrice().call(); // Returns BigInt in web3.js 4.x.x
+        // Use BigInt for large number multiplication
+        const pricePerTokenBigInt = BigInt(pricePerToken);
+        const quantityBigInt = BigInt(quantity);
+        const totalCostBigInt = pricePerTokenBigInt * quantityBigInt;
+        const totalCost = totalCostBigInt.toString(); // Convert to string for transaction
+        const totalCostEther = web3.utils.fromWei(totalCost, 'ether');
+        console.log(`Minting ${quantity} $PXLPP tokens. Total cost: ${totalCostEther} BASED`);
+
+        // Step 2: Check the user's balance
+        const balanceWei = await web3.eth.getBalance(account); // Returns BigInt in web3.js 4.x.x
+        const gasPriceWei = await web3.eth.getGasPrice(); // Returns BigInt in web3.js 4.x.x
+        const transaction = originalContract.methods.mint(quantity);
+        const gasEstimate = await transaction.estimateGas({ from: account, value: totalCost });
+        // Use BigInt for gas cost calculation
+        const gasPriceBigInt = BigInt(gasPriceWei);
+        const gasEstimateBigInt = BigInt(gasEstimate);
+        const gasCostWeiBigInt = gasPriceBigInt * gasEstimateBigInt;
+        // Use BigInt for total required calculation
+        const balanceWeiBigInt = BigInt(balanceWei);
+        const totalRequiredWeiBigInt = totalCostBigInt + gasCostWeiBigInt;
+        const totalRequiredWei = totalRequiredWeiBigInt.toString();
+
+        if (balanceWeiBigInt < totalRequiredWeiBigInt) {
+            setMessage(`Insufficient BASED for minting. Required: ${web3.utils.fromWei(totalRequiredWei, 'ether')} BASED (Tokens: ${totalCostEther} + Gas), Available: ${web3.utils.fromWei(balanceWeiBigInt.toString(), 'ether')} BASED`);
+            setLoading(false);
+            return;
+        }
+
+        // Step 3: Send the mint transaction
+        await transaction.send({
+            from: account,
+            value: totalCost, // Pass as string
+            gas: gasEstimate,
+            gasPrice: gasPriceWei
+        })
+            .on('transactionHash', (hash) => {
+                setMessage(`Mint transaction sent: ${hash}. Waiting for confirmation...`);
+            })
+            .on('receipt', (receipt) => {
+                console.log('Mint transaction receipt:', receipt);
+                if (receipt.status) {
+                    setMessage(`Successfully minted ${quantity} $PXLPP token${quantity > 1 ? 's' : ''}!`);
+                    debouncedFetchOwnedTokens(); // Refresh the token list
+                } else {
+                    setMessage(`Minting failed: Transaction reverted. Status: ${receipt.status}.`);
+                }
+                setLoading(false);
+            })
+            .on('error', (error) => {
+                console.error('Mint transaction error:', error);
+                let errorMessage = 'Minting failed: Transaction error.';
+                if (error.message) {
+                    if (error.message.includes('Sale is not active')) {
+                        errorMessage = 'Minting failed: Sale is not active.';
+                    } else if (error.message.includes('Amount must be between 1 and 10')) {
+                        errorMessage = 'Minting failed: Amount must be between 1 and 10.';
+                    } else if (error.message.includes('Exceeds max supply')) {
+                        errorMessage = 'Minting failed: Exceeds maximum supply of 7777 tokens.';
+                    } else if (error.message.includes('Not enough metadata IDs left')) {
+                        errorMessage = 'Minting failed: Not enough metadata IDs available.';
+                    } else if (error.message.includes('Insufficient payment')) {
+                        errorMessage = 'Minting failed: Insufficient payment sent.';
+                    } else if (error.message.includes('insufficient funds')) {
+                        errorMessage = 'Minting failed: Insufficient funds for gas or mint cost.';
+                    } else if (error.message.includes('reverted')) {
+                        errorMessage = 'Minting failed: Transaction reverted by the contract.';
+                    } else {
+                        errorMessage = `Minting failed: ${error.message.split('\n')[0]}`;
+                    }
+                }
+                setMessage(errorMessage);
+                setLoading(false);
+            });
+    } catch (error) {
+        console.error('Error during minting process:', error);
+        let errorMessage = `Error during minting: ${error.message}`;
+        if (error.message.includes('Sale is not active')) {
+            errorMessage = 'Minting failed: Sale is not active.';
+        } else if (error.message.includes('Amount must be between 1 and 10')) {
+            errorMessage = 'Minting failed: Amount must be between 1 and 10.';
+        }
+        setMessage(errorMessage);
+        setLoading(false);
+    }
 };
